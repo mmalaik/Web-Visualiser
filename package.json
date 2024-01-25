@@ -1,0 +1,15 @@
+{
+  "name": "web-visualiser",
+  "version": "1.0.0",
+  "description": "",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js"
+  },
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "@xeokit/xeokit-sdk": "^2.5.2-beta-7",
+    "express": "^4.18.2"
+  }
+}

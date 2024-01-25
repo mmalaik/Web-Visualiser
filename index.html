@@ -1,0 +1,169 @@
+<head>
+    <meta charset="utf-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge,chrome=1">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Viewer example</title>
+
+    <!-- Add custom style sheet -->
+    <link rel="stylesheet" type="text/css" href="style.css">
+
+    <!-- Add bootstrap to add standard fonts -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet"
+        integrity="sha384-T3c6CoIi6uLrA9TneNEoa7RxnatzjcDSCmG1MXxSR1GAsXEV/Dwwykc2MPK8M2HN" crossorigin="anonymous">
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"
+        integrity="sha384-C6RzsynM9kWDrMNeT87bh95OGNyZPhcTNXj1NW7RuBCsyN/o0jlpcV8Qyq46cDfL"
+        crossorigin="anonymous"></script>
+</head>
+
+<script id="source" type="module">
+
+    import {
+        Viewer, WebIFCLoaderPlugin, Mesh, loadOBJGeometry, ReadableGeometry,
+        MetallicMaterial, Texture, AnnotationsPlugin, math
+    } from
+        "https://cdn.jsdelivr.net/npm/@xeokit/xeokit-sdk/dist/xeokit-sdk.es.min.js";
+
+    
+        const viewer = new Viewer({
+        canvasId: "myCanvas",
+        transparent: true,
+        dtxEnabled: true
+    });
+
+    viewer.camera.eye = [-3.933, 2.855, 27.018];
+    viewer.camera.look = [4.400, 3.724, 8.899];
+    viewer.camera.up = [-0.018, 0.999, 0.039];
+
+    // enable arrow keys navigation
+    // const cameraControl = viewer.cameraControl;
+    // cameraControl.navMode = "orbit";
+
+    // IFC loader
+    const webIFCLoader = new WebIFCLoaderPlugin(viewer, {
+        wasmPath: "https://cdn.jsdelivr.net/npm/@xeokit/xeokit-sdk/dist/"
+    });
+
+    const model = webIFCLoader.load({
+        src: "ArchitecturalModel.ifc",
+        edges: true,
+         dtxEnabled: true
+    });
+
+
+    // OBJ loader
+    // loadOBJGeometry(viewer.scene, {
+    //     src: "objGeometry",
+    //     compressGeometry: false
+    // }).then(function (geometryCfg) {
+    //     // Success
+    //     new Mesh(viewer.scene, {
+    //         geometry: new ReadableGeometry(viewer.scene, geometryCfg),
+    //         material: new MetallicMaterial(viewer.scene, {
+    //             baseColor: [1, 1, 1],
+    //             metallic: 1.0,
+    //             roughness: 1.0,
+    //             specularF0: 0.7
+    //         })
+    //     });
+    // }, function () {
+    //     // Error
+    // });
+
+    var lastEntity = null;
+    var lastColorize = null;
+
+    viewer.cameraControl.on("doublePicked", pickResult => {
+        if (pickResult.entity) {
+            pickResult.entity.colorize = [0.0, 1.0, 0.0];
+
+            const metaObject = viewer.metaScene.metaObjects[pickResult.entity.id];
+
+            // console.log("Selected Object ID: " + pickResult.entity.id);
+            // console.log("Selected Canvas Position: ");
+            // console.log(pickResult.canvasPos);
+
+            document.getElementById("elementRows").innerHTML +=
+
+                "<tr>" +
+                "<td>" + pickResult.entity.id + "</td>" +
+                "<td>" + metaObject.name + "</td>" +
+                "</tr>"
+
+        }
+    });
+
+    //------------------------------------------------------------------------------------------------------------------
+    // Create an AnnotationsPlugin, with which we'll create annotations
+    //------------------------------------------------------------------------------------------------------------------
+
+    const annotations = new AnnotationsPlugin(viewer, {
+
+        markerHTML: "<div class='annotation-marker' style='background-color: {{markerBGColor}};'>{{glyph}}</div>",
+        labelHTML: "<div class='annotation-label' style='background-color: {{labelBGColor}};'>\
+    <div class='annotation-title'>{{title}}</div>\
+    <div class='annotation-desc'>{{description}}</div>\
+    </div>",
+
+        values: {
+            markerBGColor: "red",
+            labelBGColor: "white",
+            glyph: "X",
+            title: "Untitled",
+            description: "No description"
+        }
+    });
+
+    // make the annotation label disappearing if the marker is clicked 
+    annotations.on("markerClicked", (annotation) => {
+        annotation.setLabelShown(!annotation.getLabelShown());
+    });
+
+    let numAnnotations = 1;
+
+    // annotate if element is picked
+    viewer.cameraControl.on("picked", (pickResult) => {
+
+        const entity = pickResult.entity;
+        // get the bounding box
+        const aabb = entity.aabb;
+        // calc center of bounding box
+        const entityCenter = math.getAABB3Center(aabb);
+
+        // get more data of the selected element 
+        const metaObject = viewer.metaScene.metaObjects[entity.id];
+
+        // console.log("metaObject Data: ")
+        // console.log(metaObject);
+        // console.log("entity Data: ");
+        // console.log(entity);
+
+        // create a new annotation
+        annotations.createAnnotation({
+            id: "myAnnotation" + numAnnotations,
+            entity: entity,
+            worldPos: entityCenter,
+            occludable: false,
+            markerShown: true,
+            labelShown: true,
+
+            // specify the individual values for this annotation
+            values: {
+                glyph: "" + numAnnotations++,
+                title: entity.id,
+                description: metaObject ? ("My object name is: " + metaObject.name) : "No description available",
+                markerBGColor: "grey"
+            }
+        });
+    });
+
+    viewer.cameraControl.on("hover", (hoverRes) => {
+        if (hoverRes.entity) {
+            console.log(hoverRes.entity.id);
+        }
+    })
+
+
+</script>
+
+</html>
+
